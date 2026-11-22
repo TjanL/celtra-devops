@@ -1,0 +1,49 @@
+name: Build and test
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - architecture: x64
+            runner: ubuntu-latest
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          
+      - run: go build -v ./...
+
+  test:
+    needs: build
+    runs-on: ${{ matrix.runner }}
+    strategy: 
+      matrix:
+        include:
+          - architecture: x64
+            runner: ubuntu-latest
+          - architecture: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Run Go tests
+        run: go test -json main.go main_test.go > results-${{ matrix.architecture }}.json
+
+      - name: Upload Go test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: results-${{ matrix.architecture }}.json
+          path: results-${{ matrix.architecture }}.json
